@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+
+# Environment / secrets — never commit real keys
+.env
+.env.local
+.env.*.local
+
+# Vector store / RAG artifacts
+.chroma/
+chroma_db/
+*.sqlite3
+
+# LangGraph / LangSmith local artifacts
+.langgraph_api/
+
+# Claude Code local (personal) settings
+.claude/settings.local.json
+
+# Build / dist
+.dist/
+dist/
+build/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Course brief (instructor material — not republished in this public repo)
+Capstone_Multi-Agent.pdf.pdf
