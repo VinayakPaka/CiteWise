@@ -26,7 +26,7 @@ if not _ls_key.startswith("ls"):
 # --- LLM provider -----------------------------------------------------------
 # Which backend powers the agents: groq | google | ollama | anthropic.
 # Switch providers by changing this one value in .env — no code changes needed.
-CITEWISE_PROVIDER: str = os.getenv("CITEWISE_PROVIDER", "groq").lower()
+CITEWISE_PROVIDER: str = os.getenv("CITEWISE_PROVIDER", "google").lower()
 
 # A sensible default model per provider (override with CITEWISE_MODEL in .env).
 _DEFAULT_MODELS = {
