@@ -7,8 +7,8 @@ backed by a supported claim — the enforcement is by construction, not by trust
 """
 from __future__ import annotations
 
-from config import CITEWISE_MODEL
 from graph.state import ResearchState
+from llm import get_llm
 from observability import log_event
 from schemas.models import Claim, FinalReport, ReportSection
 from tools.citation_validator import allowed_sources, enforce_citations
@@ -34,9 +34,7 @@ def _format_claims(verified: list[Claim]) -> str:
 
 
 def _llm():
-    from langchain_anthropic import ChatAnthropic
-
-    return ChatAnthropic(model=CITEWISE_MODEL, max_tokens=4096)
+    return get_llm(max_tokens=4096)
 
 
 def _insufficient_report(question: str) -> FinalReport:

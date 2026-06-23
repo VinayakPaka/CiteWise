@@ -15,8 +15,8 @@ from __future__ import annotations
 
 import os
 
-from config import CITEWISE_MODEL
 from graph.state import ResearchState
+from llm import get_llm
 from observability import log_event
 from schemas.models import Claim, Verdict
 
@@ -40,9 +40,7 @@ FACT_CHECKER_SYSTEM = (
 
 
 def _llm():
-    from langchain_anthropic import ChatAnthropic
-
-    return ChatAnthropic(model=CITEWISE_MODEL, max_tokens=1024)
+    return get_llm(max_tokens=1024)
 
 
 def _verify_one(checker, claim: Claim) -> Verdict:

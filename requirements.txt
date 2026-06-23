@@ -2,12 +2,20 @@
 langgraph>=0.2.0
 langchain-core>=0.3.0
 
-# --- LLM (Claude) ---
-langchain-anthropic>=0.3.0
+# --- LLM providers (only the one set in CITEWISE_PROVIDER is required) ---
+langchain-groq>=0.2.0            # default: free, fast (Groq / Llama 3.3)
+# langchain-google-genai>=2.0.0  # optional: Google Gemini
+# langchain-ollama>=0.2.0        # optional: local Ollama
+# langchain-anthropic>=0.3.0     # optional: Claude (needs API credits)
+langchain-anthropic>=0.3.0       # kept installed so you can switch back to Claude
+
+# --- Web UI ---
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
 
 # --- Tools / integrations ---
 langchain-community>=0.3.0
-tavily-python>=0.5.0            # web search tool
+tavily-python>=0.5.0             # web search tool
 
 # --- RAG (vector store + free local embeddings) ---
 langchain-chroma>=0.2.0

@@ -64,8 +64,8 @@ def _check_expectations(case: EvalCase, state: dict) -> tuple[bool, str]:
 
 
 def run_case(app, case: EvalCase, offline: bool) -> CaseResult:
-    if case.requires_llm and (offline or not config.ANTHROPIC_API_KEY):
-        return CaseResult(case, "SKIP", "needs ANTHROPIC_API_KEY (and Tavily)")
+    if case.requires_llm and (offline or not config.active_provider_key()):
+        return CaseResult(case, "SKIP", f"needs {config.CITEWISE_PROVIDER} key (and Tavily)")
 
     log_event("eval_case_start", id=case.id, category=case.category)
     try:
@@ -93,8 +93,8 @@ def main() -> int:
 
     print("CiteWise — Evaluation Harness")
     print(langsmith_status())
-    if not config.ANTHROPIC_API_KEY and not args.offline:
-        print("Note: ANTHROPIC_API_KEY not set — LLM cases will be skipped.\n")
+    if not config.active_provider_key() and not args.offline:
+        print(f"Note: no {config.CITEWISE_PROVIDER} API key set — LLM cases will be skipped.\n")
 
     app = build_graph()
     results = [run_case(app, case, args.offline) for case in CASES]

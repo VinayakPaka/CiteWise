@@ -60,8 +60,8 @@ def main() -> None:
     print(f"Model: {config.CITEWISE_MODEL}")
     print(f"\nResearch question: {question}\n")
 
-    if not config.ANTHROPIC_API_KEY:
-        print("ANTHROPIC_API_KEY is not set — add it to .env to run the agents.")
+    if not config.active_provider_key():
+        print(f"No API key for provider '{config.CITEWISE_PROVIDER}' — add it to .env to run the agents.")
         print("(Guardrails still run; try `python -m eval.run_eval --offline`.)")
         return
     if not config.TAVILY_API_KEY:

@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from config import CITEWISE_MODEL
 from graph.state import ResearchState
+from llm import get_llm
 from schemas.models import Claim
 from tools.rag_store import retrieve, seed_sample_corpus
 from tools.web_search import web_search
@@ -42,9 +42,7 @@ def _format_sources(web_results: list[dict], docs) -> str:
 
 
 def _llm():
-    from langchain_anthropic import ChatAnthropic
-
-    return ChatAnthropic(model=CITEWISE_MODEL, max_tokens=4096)
+    return get_llm(max_tokens=4096)
 
 
 def _claim_key(claim: Claim) -> tuple[str, str]:

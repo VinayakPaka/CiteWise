@@ -4,8 +4,8 @@ Member 1 (Vinayak Paka). Output: a structured ``ResearchPlan``.
 """
 from __future__ import annotations
 
-from config import CITEWISE_MODEL
 from graph.state import ResearchState
+from llm import get_llm
 from schemas.models import ResearchPlan
 
 PLANNER_SYSTEM = (
@@ -18,9 +18,7 @@ PLANNER_SYSTEM = (
 
 
 def _llm():
-    from langchain_anthropic import ChatAnthropic
-
-    return ChatAnthropic(model=CITEWISE_MODEL, max_tokens=1024)
+    return get_llm(max_tokens=1024)
 
 
 def plan_node(state: ResearchState) -> dict:

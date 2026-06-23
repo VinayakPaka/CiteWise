@@ -20,8 +20,8 @@ SAMPLE_QUESTION = "How has the cost of solar power changed, and why does it matt
 
 
 def main() -> None:
-    if not config.ANTHROPIC_API_KEY:
-        print("ANTHROPIC_API_KEY is not set — add it to .env first.")
+    if not config.active_provider_key():
+        print(f"No API key for provider '{config.CITEWISE_PROVIDER}' — add it to .env first.")
         return
     if not config.TAVILY_API_KEY:
         print("TAVILY_API_KEY is not set — add it to .env first.")
