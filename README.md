@@ -68,11 +68,26 @@ LangSmith is optional but recommended for tracing/observability.
 ## Running
 
 ```bash
-python main.py
+python main.py                       # run the sample question end-to-end
+python main.py "Your question here"  # research your own question
 ```
 
-> **Status:** in active development. Work happens on feature branches off `main`.
-> See `Individual_Contribution_*.md` for the per-member contribution breakdown.
+The graph runs Planner → Researcher → Fact-Checker → Synthesizer, loops back to
+the Researcher when claims fail verification (capped by `MAX_RESEARCH_RETRIES`),
+then **pauses for your approval** before exporting the report to `./output`.
+
+### Evaluation
+
+```bash
+python -m eval.run_eval            # 6-case harness (LLM cases need API keys)
+python -m eval.run_eval --offline  # deterministic guardrail cases only (no keys)
+```
+
+Every node, claim, verdict and routing decision is emitted as a structured JSON
+log line; set `LANGSMITH_TRACING=true` + `LANGSMITH_API_KEY` for full tracing.
+
+> **Status:** end-to-end pipeline implemented. Work happens on feature branches
+> off `main`. See `Individual_Contribution_*.md` for the per-member breakdown.
 
 ## Team
 
