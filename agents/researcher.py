@@ -6,6 +6,8 @@ then asks the LLM to extract atomic, individually-sourced claims. Member 1
 """
 from __future__ import annotations
 
+import os
+
 from pydantic import BaseModel
 
 from graph.state import ResearchState
@@ -21,10 +23,11 @@ class _ExtractedClaims(BaseModel):
     claims: list[Claim]
 
 
-# Keep the claim set focused: fewer, higher-quality claims => a tighter report
-# and far less fact-checking work (each claim is one LLM call downstream).
-MAX_CLAIMS_PER_SUBQ = 4
-MAX_TOTAL_NEW_CLAIMS = 12
+# Claim budget. The total is sized so every sub-question gets its per-sub-question
+# share instead of the first few starving the rest (which hurts completeness).
+# Fact-checking these runs in parallel, so a larger budget stays fast. Tune in .env.
+MAX_CLAIMS_PER_SUBQ = int(os.getenv("CITEWISE_MAX_CLAIMS_PER_SUBQ", "5"))
+MAX_TOTAL_NEW_CLAIMS = int(os.getenv("CITEWISE_MAX_CLAIMS", "24"))
 
 
 RESEARCHER_SYSTEM = (
