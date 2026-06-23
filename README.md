@@ -94,4 +94,4 @@ log line; set `LANGSMITH_TRACING=true` + `LANGSMITH_API_KEY` for full tracing.
 | Member | Area |
 |--------|------|
 | **Vinayak Paka** | Research & Knowledge Pipeline — Planner, Researcher, web search, RAG, input-side state |
-| *[Member 2]* | Verification, Guardrails & Delivery — Fact-Checker, Synthesizer, routing, guardrails, evaluation |
+| **Vijay Gaurav** | Verification, Guardrails & Delivery — Fact-Checker, Synthesizer, routing, guardrails, evaluation |
