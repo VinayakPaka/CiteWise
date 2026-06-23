@@ -4,7 +4,7 @@ langchain-core>=0.3.0
 
 # --- LLM providers (only the one set in CITEWISE_PROVIDER is required) ---
 langchain-groq>=0.2.0            # default: free, fast (Groq / Llama 3.3)
-# langchain-google-genai>=2.0.0  # optional: Google Gemini
+langchain-google-genai>=2.0.0    # Google Gemini (generous free-tier quota)
 # langchain-ollama>=0.2.0        # optional: local Ollama
 # langchain-anthropic>=0.3.0     # optional: Claude (needs API credits)
 langchain-anthropic>=0.3.0       # kept installed so you can switch back to Claude

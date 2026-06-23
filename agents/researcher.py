@@ -40,13 +40,23 @@ RESEARCHER_SYSTEM = (
 )
 
 
+# Trim each source to keep prompt (input-token) cost down — the key facts are
+# almost always near the start of a result, and the URL is kept for citation.
+MAX_SOURCE_CHARS = int(os.getenv("CITEWISE_MAX_SOURCE_CHARS", "600"))
+
+
+def _trim(text: str) -> str:
+    text = (text or "").strip()
+    return text[:MAX_SOURCE_CHARS] + ("…" if len(text) > MAX_SOURCE_CHARS else "")
+
+
 def _format_sources(web_results: list[dict], docs) -> str:
     lines: list[str] = []
     for r in web_results:
-        lines.append(f"[web] {r['url']}\n{r['content']}")
+        lines.append(f"[web] {r['url']}\n{_trim(r['content'])}")
     for d in docs:
         src = d.metadata.get("source", "unknown")
-        lines.append(f"[kb] {src}\n{d.page_content}")
+        lines.append(f"[kb] {src}\n{_trim(d.page_content)}")
     return "\n\n".join(lines) if lines else "(no sources found)"
 
 
