@@ -25,13 +25,17 @@ def _get_client():
     return _client
 
 
-def web_search(query: str, max_results: int = 4) -> list[dict]:
+def web_search(
+    query: str, max_results: int = 4, search_depth: str = "basic"
+) -> list[dict]:
     """Search the web for ``query``.
 
+    ``search_depth`` is ``"basic"`` or ``"advanced"`` — the Researcher uses
+    ``"advanced"`` on retries to dig up evidence a basic search missed.
     Returns a list of ``{"title", "url", "content"}`` dicts.
     """
     resp = _get_client().search(
-        query=query, max_results=max_results, search_depth="basic"
+        query=query, max_results=max_results, search_depth=search_depth
     )
     return [
         {
