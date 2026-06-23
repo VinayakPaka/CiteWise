@@ -2,10 +2,10 @@
 
 **Course:** Multi-Agent Orchestration [AI/ML]
 **Capstone Project:** CiteWise — A Multi-Agent Research Assistant with Fact-Checking
-**Student (this document):** *[Member 2 Name]*
+**Student (this document):** Vijay Gaurav
 **Student ID:** *[Your ID]*
-**Team Member 1:** *[Member 1 Name]*
-**GitHub Repository:** *[link]*
+**Team Member 1:** Vinayak Paka
+**GitHub Repository:** https://github.com/VinayakPaka/CiteWise
 **Submission Date:** *[date]*
 **My Role:** Verification, Guardrails & Delivery (output side)
 
