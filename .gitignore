@@ -21,6 +21,9 @@ chroma_db/
 # LangGraph / LangSmith local artifacts
 .langgraph_api/
 
+# Exported reports (generated at run time, post human-approval)
+output/
+
 # Claude Code local (personal) settings
 .claude/settings.local.json
 
