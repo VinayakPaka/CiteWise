@@ -33,7 +33,7 @@ START → Planner → Researcher → Fact-Checker
 ## Tech stack
 
 - **Orchestration:** LangGraph — shared state, nodes, conditional edges, retry loop
-- **LLM:** Claude (`claude-opus-4-8`) via `langchain-anthropic`
+- **LLM:** pluggable provider (`llm.py`) — Groq (default, free), Gemini, Ollama, or Claude — chosen in `.env`
 - **Tools:** Tavily web search + Chroma vector store (RAG)
 - **Structured outputs:** Pydantic schemas on every agent handoff
 - **Observability:** LangSmith tracing
@@ -49,8 +49,11 @@ tools/        web_search.py, rag_store.py, citation_validator.py
 schemas/      models.py (Pydantic contract shared by all agents)
 guardrails/   validation.py, policy.py
 eval/         test_cases.py, run_eval.py
-config.py     environment / model configuration
-main.py       end-to-end demo entry point
+webapp/       server.py (FastAPI API), static/index.html (Tailwind UI)
+llm.py        LLM provider factory (Groq / Gemini / Ollama / Claude)
+config.py     environment / model / provider configuration
+main.py       command-line entry point
+run_web.py    web app launcher
 ```
 
 ## Setup
@@ -62,10 +65,24 @@ pip install -r requirements.txt
 copy .env.example .env           # then fill in your API keys
 ```
 
-You need an **Anthropic API key** (LLM) and a **Tavily API key** (web search).
-LangSmith is optional but recommended for tracing/observability.
+You need a free **Groq API key** (LLM — https://console.groq.com/keys) and a free
+**Tavily API key** (web search — https://app.tavily.com). To use a different model,
+set `CITEWISE_PROVIDER` / `CITEWISE_MODEL` in `.env` (Gemini, local Ollama, or Claude).
+LangSmith is optional for tracing/observability.
 
 ## Running
+
+### Web UI (recommended)
+
+```bash
+python run_web.py        # then open http://127.0.0.1:8000
+```
+
+A single-page app: type a question, watch the agents work live, review the
+fact-checked draft with colour-coded verdicts, and **approve or reject** before
+the report is exported.
+
+### Command line
 
 ```bash
 python main.py                       # run the sample question end-to-end
