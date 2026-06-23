@@ -14,6 +14,15 @@ except ModuleNotFoundError:
     # Fall back to whatever is already in the process environment.
     pass
 
+# --- Observability guard ----------------------------------------------------
+# LangChain POSTs traces to LangSmith whenever LANGSMITH_TRACING is truthy. With
+# a missing/placeholder key that floods the console with 403 errors, so we keep
+# tracing on only when the key actually looks like a LangSmith key (ls.../lsv2_).
+_ls_key = (os.getenv("LANGSMITH_API_KEY") or "").strip()
+if not _ls_key.startswith("ls"):
+    os.environ["LANGSMITH_TRACING"] = "false"
+    os.environ["LANGCHAIN_TRACING_V2"] = "false"
+
 # --- LLM provider -----------------------------------------------------------
 # Which backend powers the agents: groq | google | ollama | anthropic.
 # Switch providers by changing this one value in .env — no code changes needed.

@@ -21,6 +21,12 @@ class _ExtractedClaims(BaseModel):
     claims: list[Claim]
 
 
+# Keep the claim set focused: fewer, higher-quality claims => a tighter report
+# and far less fact-checking work (each claim is one LLM call downstream).
+MAX_CLAIMS_PER_SUBQ = 4
+MAX_TOTAL_NEW_CLAIMS = 12
+
+
 RESEARCHER_SYSTEM = (
     "You are the Researcher in a multi-agent research system. You are given a "
     "sub-question and a set of sources (web results and reference documents). "
@@ -87,6 +93,8 @@ def research_node(state: ResearchState) -> dict:
 
     new_claims: list[Claim] = []
     for sub_q in targets:
+        if len(new_claims) >= MAX_TOTAL_NEW_CLAIMS:
+            break
         sources = _format_sources(
             web_search(sub_q, search_depth=search_depth), retrieve(sub_q)
         )
@@ -101,12 +109,16 @@ def research_node(state: ResearchState) -> dict:
                 ),
             ]
         )
+        per_subq = 0
         for claim in result.claims:
+            if per_subq >= MAX_CLAIMS_PER_SUBQ or len(new_claims) >= MAX_TOTAL_NEW_CLAIMS:
+                break
             # Pin the sub-question so "covered" tracking is reliable downstream.
             claim = claim.model_copy(update={"sub_question": sub_q})
             key = _claim_key(claim)
             if key not in seen:
                 seen.add(key)
                 new_claims.append(claim)
+                per_subq += 1
 
     return {"claims": new_claims}
