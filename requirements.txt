@@ -2,18 +2,27 @@
 langgraph>=0.2.0
 langchain-core>=0.3.0
 
-# --- LLM (Claude) ---
-langchain-anthropic>=0.3.0
+# --- LLM providers (only the one set in CITEWISE_PROVIDER is required) ---
+langchain-groq>=0.2.0            # Groq (free, fast / Llama 3.3)
+langchain-openai>=0.2.0          # Cerebras (OpenAI-compatible) — default primary
+langchain-mistralai>=0.2.0       # Mistral (free tier, tool calling) — default fallback
+langchain-google-genai>=2.0.0    # Google Gemini (generous free-tier quota)
+# langchain-ollama>=0.2.0        # optional: local Ollama
+# langchain-anthropic>=0.3.0     # optional: Claude (needs API credits)
+langchain-anthropic>=0.3.0       # kept installed so you can switch back to Claude
+
+# --- Web UI ---
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+httpx>=0.27.0                    # HTTP client (web search + provider SDKs)
+PyJWT>=2.8.0                     # signs the email-login session cookie (JWT)
+reportlab>=4.0.0                 # server-side PDF export of approved reports (pure-Python)
+# Accounts + research history use Python's built-in sqlite3 (no extra package).
+# Passwords are hashed with the stdlib (hashlib.pbkdf2_hmac) — no extra package.
 
 # --- Tools / integrations ---
 langchain-community>=0.3.0
-tavily-python>=0.5.0            # web search tool
-
-# --- RAG (vector store + free local embeddings) ---
-langchain-chroma>=0.2.0
-chromadb>=0.5.0
-langchain-huggingface>=0.1.0
-sentence-transformers>=3.0.0
+tavily-python>=0.5.0             # web search tool
 
 # --- Observability ---
 langsmith>=0.1.0

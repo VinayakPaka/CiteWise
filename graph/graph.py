@@ -27,7 +27,7 @@ from agents.fact_checker import fact_check_node
 from agents.planner import plan_node
 from agents.researcher import research_node
 from agents.synthesizer import synthesize_node
-from config import MAX_RESEARCH_RETRIES
+from config import MAX_RESEARCH_RETRIES, evidence_is_thin
 from graph.state import ResearchState
 from guardrails.policy import check_policy
 from guardrails.validation import validate_question
@@ -84,11 +84,28 @@ def human_approval_node(state: ResearchState) -> dict:
 
     if isinstance(decision, dict):
         approved = bool(decision.get("approved"))
+        feedback = (decision.get("feedback") or "").strip()
     else:
         approved = bool(decision)
+        feedback = ""
 
-    log_event("human_decision", approved=approved)
-    return {"approved": approved}
+    # On a rejection we steer the Synthesizer: explicit feedback if the reviewer
+    # gave any, and a bumped revision_count so a feedback-less reject still rotates
+    # to a visibly different structure (handled in the Synthesizer).
+    updates: dict = {"approved": approved}
+    if approved:
+        updates["revision_feedback"] = None
+    else:
+        updates["revision_feedback"] = feedback or None
+        updates["revision_count"] = state.get("revision_count", 0) + 1
+
+    log_event(
+        "human_decision",
+        approved=approved,
+        has_feedback=bool(feedback),
+        revision_count=updates.get("revision_count", state.get("revision_count", 0)),
+    )
+    return updates
 
 
 def export_node(state: ResearchState) -> dict:
@@ -104,7 +121,8 @@ def export_node(state: ResearchState) -> dict:
         lines += [f"## {section.heading}\n", section.content, ""]
     if report.citations:
         lines += ["## Citations\n"]
-        lines += [f"- {url}" for url in report.citations]
+        # Number them so the inline [n] markers in the prose resolve here.
+        lines += [f"[{i}] {url}" for i, url in enumerate(report.citations, 1)]
     path.write_text("\n".join(lines), encoding="utf-8")
 
     log_event("export", path=str(path), n_citations=len(report.citations))
@@ -121,15 +139,20 @@ def route_after_guardrail(state: ResearchState) -> str:
 def route_after_factcheck(state: ResearchState) -> str:
     """Conditional #1: adversarial retry loop with a hard loop guard.
 
-    Loop back to the Researcher when claims remain unverified AND the retry
-    budget is not exhausted; otherwise proceed to synthesis.
+    Loop back to the Researcher while the retry budget is not exhausted AND either
+    (a) some claims remain unverified, or (b) the verified evidence is still too
+    thin (too few verified claims / distinct sources). Case (b) is what keeps a
+    sparse topic — one whose first search returns a single secondary source and a
+    handful of claims that all happen to verify — from being written up as a
+    complete report. Otherwise proceed to synthesis.
     """
     verdicts = state.get("verdicts", []) or []
     verified = state.get("verified_claims", []) or []
     retry_count = state.get("retry_count", 0)
 
     unresolved = [v for v in verdicts if v.status != "supported"]
-    needs_more = bool(unresolved) or len(verified) == 0
+    thin = evidence_is_thin(verified)
+    needs_more = bool(unresolved) or thin
 
     if needs_more and retry_count < MAX_RESEARCH_RETRIES:
         log_event(
@@ -137,6 +160,7 @@ def route_after_factcheck(state: ResearchState) -> str:
             decision="retry",
             unresolved=len(unresolved),
             verified=len(verified),
+            thin=thin,
             retry_count=retry_count,
         )
         return "retry"
@@ -145,6 +169,7 @@ def route_after_factcheck(state: ResearchState) -> str:
         "route_factcheck",
         decision="synthesize",
         verified=len(verified),
+        thin=thin,
         retry_count=retry_count,
         loop_guard_hit=needs_more and retry_count >= MAX_RESEARCH_RETRIES,
     )
@@ -236,4 +261,6 @@ def initial_state(question: str) -> ResearchState:
         "refused": False,
         "refusal_reason": None,
         "approved": False,
+        "revision_feedback": None,
+        "revision_count": 0,
     }

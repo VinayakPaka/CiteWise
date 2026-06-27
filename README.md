@@ -26,31 +26,37 @@ START → Planner → Researcher → Fact-Checker
 | Agent | Responsibility |
 |-------|----------------|
 | **Planner** | Decomposes the question into 3–6 answerable sub-questions |
-| **Researcher** | Web search + RAG retrieval; extracts claims with their sources |
+| **Researcher** | Live web search with source-quality filtering; extracts claims with their sources |
 | **Fact-Checker** | Adversarially verifies each claim against its source |
 | **Synthesizer** | Writes the cited report from verified claims only |
 
 ## Tech stack
 
 - **Orchestration:** LangGraph — shared state, nodes, conditional edges, retry loop
-- **LLM:** Claude (`claude-opus-4-8`) via `langchain-anthropic`
-- **Tools:** Tavily web search + Chroma vector store (RAG)
+- **LLM:** pluggable provider (`llm.py`) with an **automatic fallback chain** — default **Cerebras** (`gpt-oss-120b`, free ~1M tokens/day) failing over to **Mistral**; also supports Groq, Gemini, Ollama, Claude. Chosen via `CITEWISE_PROVIDER` / `CITEWISE_FALLBACK_PROVIDERS` in `.env`
+- **Tools:** Tavily web search behind an authority-ranked **source-quality gate** (`tools/source_quality.py`) that blocks social media / video / forums / wikis and prefers primary sources (gov, edu, IGOs, peer-reviewed)
 - **Structured outputs:** Pydantic schemas on every agent handoff
 - **Observability:** LangSmith tracing
-- **Guardrails:** input validation, refusal node, citation enforcement, loop cap
+- **Guardrails:** input validation, refusal node, source-quality filtering, citation enforcement, evidence-sufficiency + retry-loop caps
 - **Human-in-the-loop:** approval interrupt before the final report is exported
+- **Web app:** Aurora single-page UI, email + password sign-in (JWT) or guest login, and a
+  per-user research **history** stored in local SQLite (`webapp/db.py`)
 
 ## Repository layout
 
 ```
 agents/       planner.py, researcher.py, fact_checker.py, synthesizer.py
 graph/        state.py (shared state), graph.py (nodes, edges, routers)
-tools/        web_search.py, rag_store.py, citation_validator.py
+tools/        web_search.py, source_quality.py, citation_validator.py
 schemas/      models.py (Pydantic contract shared by all agents)
 guardrails/   validation.py, policy.py
 eval/         test_cases.py, run_eval.py
-config.py     environment / model configuration
-main.py       end-to-end demo entry point
+webapp/       server.py (FastAPI API), auth.py (email + password, JWT cookie),
+              db.py (SQLite accounts + history), static/ (Aurora UI: index.html, app.js)
+llm.py        LLM provider factory (Groq / Gemini / Ollama / Claude)
+config.py     environment / model / provider configuration
+main.py       command-line entry point
+run_web.py    web app launcher
 ```
 
 ## Setup
@@ -62,10 +68,34 @@ pip install -r requirements.txt
 copy .env.example .env           # then fill in your API keys
 ```
 
-You need an **Anthropic API key** (LLM) and a **Tavily API key** (web search).
-LangSmith is optional but recommended for tracing/observability.
+You need a free **LLM API key** and a free **Tavily API key** (web search —
+https://app.tavily.com). The default LLM is **Cerebras** (free ~1M tokens/day, no
+card — https://cloud.cerebras.ai) with automatic failover to **Mistral**
+(https://console.mistral.ai); add either/both key in `.env`. To use a different
+backend, set `CITEWISE_PROVIDER` / `CITEWISE_FALLBACK_PROVIDERS` (also supports
+Groq, Gemini, local Ollama, or Claude). LangSmith is optional for tracing.
 
 ## Running
+
+### Web UI (recommended)
+
+```bash
+python run_web.py        # then open http://127.0.0.1:8000
+```
+
+A polished single-page app: **sign in** (email or guest), type a question, watch
+the agents work live, review the fact-checked draft with colour-coded verdicts, and
+**approve or reject** before the report is exported. Every run is saved to your
+**history** sidebar so you can re-open past research anytime.
+
+**Login:** Sign up with an **email + password** — the server hashes the password
+(PBKDF2-HMAC-SHA256) and stores a signed **JWT** in an httponly cookie. A no-password
+**guest login** is also kept (set `CITEWISE_ALLOW_GUEST=false` to require an account)
+so the app always works — handy for a live demo. Set `CITEWISE_JWT_SECRET` to a long
+random string in production. Accounts and history live in a local `citewise.db`
+SQLite file (git-ignored).
+
+### Command line
 
 ```bash
 python main.py                       # run the sample question end-to-end
@@ -93,5 +123,5 @@ log line; set `LANGSMITH_TRACING=true` + `LANGSMITH_API_KEY` for full tracing.
 
 | Member | Area |
 |--------|------|
-| **Vinayak Paka** | Research & Knowledge Pipeline — Planner, Researcher, web search, RAG, input-side state |
+| **Vinayak Paka** | Research Pipeline — Planner, Researcher, web search, source-quality filtering, input-side state |
 | **Vijay Gaurav** | Verification, Guardrails & Delivery — Fact-Checker, Synthesizer, routing, guardrails, evaluation |

@@ -26,18 +26,15 @@ def allowed_sources(verified_claims: list[Claim]) -> list[str]:
 
 
 def enforce_citations(report: FinalReport, verified_claims: list[Claim]) -> FinalReport:
-    """Return a copy of ``report`` whose citations ⊆ verified source URLs.
+    """Return a copy of ``report`` whose citations == verified source URLs.
 
-    Any citation not backed by a supported claim is dropped. The citation list is
-    then normalised to exactly the allowed sources that the report draws on.
+    The citation list is normalised to exactly the allowed sources, in the fixed
+    ``allowed_sources`` order. Any citation the model invented or pulled from an
+    unsupported claim is dropped by construction. Using this canonical order (the
+    same order the Synthesizer is given for its inline [n] markers) keeps the
+    rendered, position-numbered Citations list aligned with the inline markers in
+    the prose.
     """
-    allowed = set(allowed_sources(verified_claims))
-
-    # Keep only model-provided citations that are actually backed by evidence,
-    # preserving the model's ordering, then append any allowed source it missed.
-    kept = [c for c in report.citations if c in allowed]
-    for url in allowed_sources(verified_claims):
-        if url not in kept:
-            kept.append(url)
-
-    return report.model_copy(update={"citations": kept})
+    return report.model_copy(
+        update={"citations": allowed_sources(verified_claims)}
+    )

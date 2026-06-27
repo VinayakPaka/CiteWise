@@ -14,15 +14,21 @@ acceptance threshold.
 from __future__ import annotations
 
 import os
+from concurrent.futures import ThreadPoolExecutor
 
-from config import CITEWISE_MODEL
 from graph.state import ResearchState
+from llm import get_structured_llm
 from observability import log_event
 from schemas.models import Claim, Verdict
 
 # Minimum confidence for a "supported" verdict to count as verified. Tunable via
 # env so reviewers can tighten/loosen acceptance without code changes.
 ACCEPT_CONFIDENCE = float(os.getenv("CITEWISE_ACCEPT_CONFIDENCE", "0.6"))
+
+# How many claims to verify concurrently. Kept low because free tiers rate-limit
+# on tokens-per-minute (e.g. Groq's 12k TPM): too much concurrency bursts past the
+# limit and forces retries. The per-call SDK retry (see llm.py) handles pacing.
+FACT_CHECK_WORKERS = int(os.getenv("CITEWISE_FACTCHECK_WORKERS", "2"))
 
 FACT_CHECKER_SYSTEM = (
     "You are the Fact-Checker in a multi-agent research system. You are an "
@@ -34,15 +40,12 @@ FACT_CHECKER_SYSTEM = (
     "  - 'needs_more_evidence': the snippet is related but insufficient to "
     "confirm the claim on its own.\n\n"
     "Do not use outside knowledge to fill gaps the snippet leaves open — that is "
-    "exactly the kind of unsupported leap you must catch. Give a calibrated "
-    "confidence (0-1) and concise reasoning."
+    "exactly the kind of unsupported leap you must catch. Be strict: vague, "
+    "promotional or opinion statements (e.g. 'solar offers many benefits') are "
+    "NOT 'supported' unless the snippet states a specific, checkable fact — mark "
+    "those 'needs_more_evidence'. Give a calibrated confidence (0-1) and concise "
+    "reasoning."
 )
-
-
-def _llm():
-    from langchain_anthropic import ChatAnthropic
-
-    return ChatAnthropic(model=CITEWISE_MODEL, max_tokens=1024)
 
 
 def _verify_one(checker, claim: Claim) -> Verdict:
@@ -65,11 +68,17 @@ def _verify_one(checker, claim: Claim) -> Verdict:
         return verdict
     except Exception as exc:  # be robust: a failed check is treated as unverified
         log_event("fact_checker_error", claim=claim.text, error=str(exc))
+        msg = str(exc)
+        # Keep the UI clean: collapse a raw rate-limit dump into a plain note.
+        if "rate_limit" in msg.lower() or "429" in msg:
+            reason = "Could not verify in time — the model's free-tier rate limit was hit."
+        else:
+            reason = "Verification could not be completed for this claim."
         return Verdict(
             claim_text=claim.text,
             status="needs_more_evidence",
             confidence=0.0,
-            reasoning=f"Verification failed to run: {exc}",
+            reasoning=reason,
         )
 
 
@@ -85,13 +94,16 @@ def fact_check_node(state: ResearchState) -> dict:
         log_event("fact_check", n_claims=0, note="no claims to verify")
         return {"verdicts": [], "verified_claims": []}
 
-    checker = _llm().with_structured_output(Verdict)
+    checker = get_structured_llm(Verdict, max_tokens=1024)
 
-    verdicts: list[Verdict] = []
+    # Verify claims concurrently — each is an independent LLM call, so a small
+    # thread pool turns N sequential round-trips into ~N/workers. Capped low to
+    # stay within free-tier provider rate limits.
+    with ThreadPoolExecutor(max_workers=FACT_CHECK_WORKERS) as pool:
+        verdicts: list[Verdict] = list(pool.map(lambda c: _verify_one(checker, c), claims))
+
     verified: list[Claim] = []
-    for claim in claims:
-        verdict = _verify_one(checker, claim)
-        verdicts.append(verdict)
+    for claim, verdict in zip(claims, verdicts):
         accepted = (
             verdict.status == "supported" and verdict.confidence >= ACCEPT_CONFIDENCE
         )

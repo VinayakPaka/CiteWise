@@ -37,3 +37,9 @@ class ResearchState(TypedDict):
     refused: bool
     refusal_reason: Optional[str]
     approved: bool
+    # Human steering captured when a draft is rejected; consumed by the
+    # Synthesizer so the revision actually differs from the rejected draft.
+    revision_feedback: Optional[str]
+    # How many times the human has rejected a draft. Lets the Synthesizer rotate
+    # to a visibly different report structure on each feedback-less rejection.
+    revision_count: int

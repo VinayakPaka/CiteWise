@@ -5,7 +5,7 @@ These schemas are the *joint* foundation of CiteWise: the Researcher produces
 Synthesizer produces a ``FinalReport``. Using schemas (not free text) on every
 handoff is what makes the graph reliable and debuggable.
 """
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -60,6 +60,46 @@ class ReportSection(BaseModel):
     content: str
 
 
+class KeyFigure(BaseModel):
+    """One headline statistic for the at-a-glance band, drawn from a verified claim."""
+
+    value: str = Field(
+        ..., description="Short headline number copied from a claim, e.g. '-90%', "
+        "'$0.044/kWh', '5-7%', '92%'."
+    )
+    label: str = Field(..., description="2-5 word description of what the number measures.")
+    source_index: int = Field(
+        ..., description="1-based index into the report's citations list that backs this figure."
+    )
+
+
+class ReportChart(BaseModel):
+    """An optional chart built from comparable numbers in the verified claims.
+
+    Deliberately a single, flat series — ``categories`` and ``values`` are parallel
+    arrays — so even a smaller model can emit it reliably as structured output.
+    """
+
+    kind: Literal["bar", "line"] = Field(
+        ..., description="'bar' for a comparison across categories, 'line' for a trend over time."
+    )
+    title: str = Field(..., description="Short chart title.")
+    y_label: str = Field(
+        "", description="Y-axis label including units, e.g. 'USD/kWh' or '% reduction'."
+    )
+    categories: list[str] = Field(
+        ..., description="2-8 x-axis labels, e.g. ['2010','2015','2020'] or "
+        "['Utility','Commercial','Residential']."
+    )
+    values: list[float] = Field(
+        ..., description="Numeric values parallel to categories; ONLY numbers that "
+        "appear in the verified claims."
+    )
+    source_index: Optional[int] = Field(
+        None, description="1-based citation index the chart data comes from."
+    )
+
+
 class FinalReport(BaseModel):
     """Output of the Synthesizer: the cited brief shown to the human for approval."""
 
@@ -69,4 +109,14 @@ class FinalReport(BaseModel):
     )
     citations: list[str] = Field(
         ..., description="Deduplicated list of source URLs cited in the report."
+    )
+    key_figures: list[KeyFigure] = Field(
+        default_factory=list,
+        description="2-4 headline statistics for an at-a-glance band; empty if the "
+        "report has no clear numbers.",
+    )
+    chart: Optional[ReportChart] = Field(
+        default=None,
+        description="Optional chart; null unless the verified claims contain a "
+        "coherent trend or comparison.",
     )
