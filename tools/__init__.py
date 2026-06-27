@@ -1,1 +1,1 @@
-"""External tools: web search, RAG vector store, citation validator."""
+"""External tools: web search, source-quality gate, citation validator."""

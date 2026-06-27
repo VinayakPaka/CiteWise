@@ -13,10 +13,16 @@ env/
 .env.local
 .env.*.local
 
-# Vector store / RAG artifacts
-.chroma/
-chroma_db/
+# Local SQLite databases
 *.sqlite3
+
+# Stale vector-store artifact (RAG removed; ignore any leftover dir)
+.chroma/
+
+# Web app: local accounts + research history database
+citewise.db
+citewise.db-wal
+citewise.db-shm
 
 # LangGraph / LangSmith local artifacts
 .langgraph_api/

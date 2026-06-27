@@ -5,7 +5,7 @@ Member 1 (Vinayak Paka). Output: a structured ``ResearchPlan``.
 from __future__ import annotations
 
 from graph.state import ResearchState
-from llm import get_llm
+from llm import get_structured_llm
 from schemas.models import ResearchPlan
 
 PLANNER_SYSTEM = (
@@ -17,13 +17,9 @@ PLANNER_SYSTEM = (
 )
 
 
-def _llm():
-    return get_llm(max_tokens=1024)
-
-
 def plan_node(state: ResearchState) -> dict:
     """LangGraph node: question -> ResearchPlan."""
-    llm = _llm().with_structured_output(ResearchPlan)
+    llm = get_structured_llm(ResearchPlan, max_tokens=1024)
     plan = llm.invoke(
         [
             ("system", PLANNER_SYSTEM),

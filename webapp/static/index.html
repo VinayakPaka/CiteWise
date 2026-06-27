@@ -3,233 +3,654 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CiteWise — Multi-Agent Research Assistant</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>CiteWise — every claim, traced to its source</title>
+  <meta name="description" content="CiteWise is a multi-agent research instrument. It plans, gathers, adversarially fact-checks, and writes — anchoring every claim to a verified, cited source." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- Fraunces (display, optical), Newsreader (reading serif), IBM Plex Mono (the record voice) -->
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..900;1,9..144,400..600&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
   <style>
-    @keyframes pulse-ring { 0%{transform:scale(.9);opacity:.7} 50%{transform:scale(1);opacity:1} 100%{transform:scale(.9);opacity:.7} }
-    .step-active { animation: pulse-ring 1.2s ease-in-out infinite; }
-    .fade-in { animation: fade .35s ease-out; }
-    @keyframes fade { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+  /* =====================================================================
+     CiteWise — "The Critical Edition"
+     A research instrument rendered as an annotated scholarly document.
+     Light, cool, editorial. The citation apparatus is the signature.
+     ===================================================================== */
+
+  :root {
+    /* filing-room surfaces (cool, deliberately not cream) */
+    --paper:      #E9ECF2;
+    --paper-2:    #E2E6EE;
+    --card:       #FBFCFD;
+    --card-edge:  #FFFFFF;
+
+    /* ink */
+    --ink:        #16202E;
+    --ink-soft:   #46556A;
+    --ink-faint:  #8794A6;
+    --ink-ghost:  #AEB8C6;
+
+    /* structural ink + functional status (derived from verification states) */
+    --navy:       #1C2E4A;
+    --navy-700:   #142136;
+    --navy-300:   #5C7196;
+    --verified:   #157A60;
+    --verified-w: rgba(21,122,96,.10);
+    --refuted:    #B23A48;
+    --refuted-w:  rgba(178,58,72,.09);
+    --pending:    #9A6B12;
+    --pending-w:  rgba(154,107,18,.10);
+
+    /* rules / hairlines */
+    --rule:       #D3DAE4;
+    --rule-2:     #C2CBD8;
+    --rule-ink:   #1C2E4A;
+
+    --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body:    'Newsreader', Georgia, serif;
+    --font-mono:    'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    --shadow-sheet: 0 1px 0 rgba(20,33,54,.04), 0 18px 44px -28px rgba(20,33,54,.28);
+    --shadow-pop:   0 24px 60px -28px rgba(20,33,54,.45);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 17px;
+    line-height: 1.6;
+    color: var(--ink);
+    background-color: var(--paper);
+    /* faint ruled-ledger texture on the desk surface */
+    background-image:
+      radial-gradient(120% 80% at 50% -10%, rgba(255,255,255,.65), transparent 60%),
+      repeating-linear-gradient(180deg, transparent 0 31px, rgba(28,46,74,.035) 31px 32px);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  [hidden] { display: none !important; }
+  ::selection { background: rgba(21,122,96,.20); }
+
+  a { color: inherit; }
+  button { font-family: inherit; }
+
+  /* ---- scrollbars ---- */
+  ::-webkit-scrollbar { width: 11px; height: 11px; }
+  ::-webkit-scrollbar-thumb { background: var(--rule-2); border-radius: 0; border: 3px solid var(--paper); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--navy-300); }
+
+  /* ===================== shared type roles ===================== */
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: .68rem;
+    font-weight: 500;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--navy-300);
+  }
+  .mono { font-family: var(--font-mono); }
+  .display {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    font-weight: 600;
+    letter-spacing: -.012em;
+    line-height: 1.04;
+    color: var(--ink);
+  }
+  .lead {
+    font-family: var(--font-body);
+    font-size: 1.22rem;
+    line-height: 1.62;
+    color: var(--ink-soft);
+  }
+
+  /* ===================== controls ===================== */
+  .btn {
+    font-family: var(--font-mono);
+    font-size: .72rem;
+    font-weight: 500;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    padding: .7rem 1.15rem;
+    cursor: pointer;
+    transition: background .16s, color .16s, border-color .16s, transform .08s;
+    display: inline-flex; align-items: center; gap: .55rem;
+    white-space: nowrap;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-ink   { background: var(--navy); color: #F4F7FB; border-color: var(--navy); }
+  .btn-ink:hover:not(:disabled)   { background: var(--navy-700); }
+  .btn-go    { background: var(--verified); color: #F2FBF7; border-color: var(--verified); }
+  .btn-go:hover:not(:disabled)    { background: #11684f; }
+  .btn-ghost { background: transparent; color: var(--ink-soft); border-color: var(--rule-2); }
+  .btn-ghost:hover:not(:disabled) { color: var(--ink); border-color: var(--navy-300); background: rgba(28,46,74,.04); }
+  .btn-quiet { background: transparent; color: var(--ink-faint); border-color: transparent; padding: .5rem .6rem; }
+  .btn-quiet:hover:not(:disabled) { color: var(--ink); }
+
+  .field {
+    width: 100%;
+    font-family: var(--font-body);
+    font-size: 1rem;
+    color: var(--ink);
+    background: var(--card);
+    border: 1px solid var(--rule-2);
+    border-radius: 2px;
+    padding: .7rem .85rem;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .field::placeholder { color: var(--ink-ghost); }
+  .field:focus { border-color: var(--navy-300); box-shadow: 0 0 0 3px rgba(28,46,74,.10); }
+  textarea.field { resize: none; line-height: 1.55; }
+
+  /* ===================== sheet / panel ===================== */
+  .sheet {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    box-shadow: var(--shadow-sheet);
+  }
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+  }
+
+  /* the print "footnote separator" — a real artifact from critical editions */
+  .footnote-rule { height: 2px; width: 56px; background: var(--rule-ink); border: 0; margin: 0; }
+  .hair { height: 1px; width: 100%; background: var(--rule); border: 0; }
+
+  /* ===================== wordmark ===================== */
+  .wordmark { display: inline-flex; align-items: baseline; gap: .14rem; text-decoration: none; }
+  .wordmark .mark {
+    font-family: var(--font-display); font-weight: 600; font-size: 1.32rem;
+    letter-spacing: -.02em; color: var(--ink);
+  }
+  .wordmark .mark .w { color: var(--verified); }
+  .wordmark .ref {
+    font-family: var(--font-mono); font-size: .62rem; font-weight: 500;
+    color: var(--navy-300); transform: translateY(-.55em); letter-spacing: .04em;
+  }
+
+  /* ===================== proof-stage pipeline ===================== */
+  .stages { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0; }
+  .stage {
+    display: flex; align-items: center; gap: .5rem;
+    font-family: var(--font-mono); font-size: .68rem; font-weight: 500;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink-ghost);
+    padding: .4rem .8rem .4rem 0;
+  }
+  .stage .num {
+    display: grid; place-items: center; height: 1.4rem; width: 1.4rem;
+    border: 1px solid var(--rule-2); border-radius: 2px;
+    font-size: .64rem; color: var(--ink-faint); background: var(--card);
+    transition: all .2s;
+  }
+  .stage.done  { color: var(--verified); }
+  .stage.done  .num { color: #fff; background: var(--verified); border-color: var(--verified); }
+  .stage.live  { color: var(--navy); }
+  .stage.live  .num { color: #fff; background: var(--navy); border-color: var(--navy); animation: blink 1.3s ease-in-out infinite; }
+  .stage .arrow { color: var(--ink-ghost); margin-right: .8rem; }
+  .stage:last-child .arrow { display: none; }
+
+  /* ===================== the document (report + margin) ===================== */
+  .doc { font-family: var(--font-body); color: var(--ink); }
+  .doc-head { display: flex; align-items: baseline; gap: .7rem; margin-bottom: .25rem; }
+  .doc-head .kicker {
+    font-family: var(--font-mono); font-size: .64rem; letter-spacing: .2em;
+    text-transform: uppercase; color: var(--navy-300);
+  }
+  .doc-title {
+    font-family: var(--font-display); font-weight: 600; font-size: 1.6rem;
+    letter-spacing: -.015em; color: var(--ink); margin: .1rem 0 0; line-height: 1.1;
+  }
+
+  /* two-column manuscript + margin; collapses on small screens */
+  .doc-grid { display: grid; grid-template-columns: 1fr; gap: 1.4rem; margin-top: 1.2rem; }
+  @media (min-width: 980px) {
+    .doc-grid { grid-template-columns: minmax(0,1fr) 16.5rem; gap: 2.4rem; }
+    .doc-margin { border-top: 0; padding-top: 0; }
+    .doc-margin-inner { position: sticky; top: 1.5rem; }
+  }
+
+  .doc-body { min-width: 0; }
+  .doc-body p { margin: 0 0 1rem; line-height: 1.66; }
+  .doc-body p:last-child { margin-bottom: 0; }
+  .doc-summary {
+    font-size: 1.16rem; line-height: 1.58; color: var(--ink);
+    padding-left: 1.1rem; border-left: 2px solid var(--verified);
+  }
+  .doc-section { margin-top: 1.9rem; }
+  .doc-section h4 {
+    font-family: var(--font-display); font-weight: 600; font-size: 1.18rem;
+    letter-spacing: -.01em; color: var(--navy); margin: 0 0 .5rem;
+  }
+  .doc-body strong { font-weight: 600; color: var(--ink); }
+  .doc-body em { font-style: italic; }
+  .doc-body code {
+    font-family: var(--font-mono); font-size: .82em;
+    background: rgba(28,46,74,.07); border: 1px solid var(--rule);
+    padding: .02rem .3rem; border-radius: 2px; color: var(--navy-700);
+  }
+  .doc-body ul, .doc-body ol { margin: .7rem 0; padding-left: 1.3rem; }
+  .doc-body li { margin: .3rem 0; line-height: 1.6; }
+  .doc-body ul { list-style: none; padding-left: 0; }
+  .doc-body ul > li { position: relative; padding-left: 1.25rem; }
+  .doc-body ul > li::before {
+    content: "—"; position: absolute; left: 0; top: 0;
+    color: var(--verified); font-family: var(--font-mono); font-size: .85em;
+  }
+
+  /* inline citation marker — true superscript, mono, the record voice */
+  .cite-ref {
+    font-family: var(--font-mono); font-size: .62em; font-weight: 600;
+    vertical-align: super; line-height: 0;
+    color: var(--navy); text-decoration: none; cursor: pointer;
+    padding: 0 .08em; margin: 0 .02em;
+    border-bottom: 1px solid transparent;
+    transition: color .14s, border-color .14s;
+  }
+  .cite-ref::before { content: "["; color: var(--ink-ghost); }
+  .cite-ref::after  { content: "]"; color: var(--ink-ghost); }
+  .cite-ref:hover, .cite-ref.is-active { color: var(--verified); border-color: var(--verified); }
+
+  /* ---- the margin apparatus (the signature) ---- */
+  .doc-margin .margin-label {
+    font-family: var(--font-mono); font-size: .62rem; letter-spacing: .2em;
+    text-transform: uppercase; color: var(--navy-300); margin-bottom: .7rem;
+    display: flex; align-items: center; gap: .6rem;
+  }
+  .doc-margin .margin-label::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+  .sources { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .source {
+    display: grid; grid-template-columns: auto 1fr; gap: .6rem; align-items: start;
+    padding: .6rem 0; border-bottom: 1px solid var(--rule);
+    scroll-margin-top: 1.5rem;
+    transition: background .2s;
+  }
+  .source:first-child { padding-top: 0; }
+  .source:last-child { border-bottom: 0; }
+  .source-num {
+    font-family: var(--font-mono); font-size: .7rem; font-weight: 600;
+    color: var(--navy); padding-top: .12rem; min-width: 1.4rem;
+    display: inline-flex; align-items: center; gap: .3rem;
+  }
+  .tick { font-family: var(--font-mono); font-weight: 600; font-size: .82rem; line-height: 1; }
+  .tick-ok    { color: var(--verified); }
+  .tick-no    { color: var(--refuted); }
+  .tick-maybe { color: var(--pending); }
+  .source-link { text-decoration: none; min-width: 0; display: block; }
+  .source-host {
+    display: inline-block;
+    font-family: var(--font-mono); font-size: .76rem; font-weight: 500;
+    color: var(--ink); word-break: break-word; line-height: 1.35;
+    border-bottom: 1px solid transparent; transition: color .14s, border-color .14s;
+  }
+  .source-link:hover .source-host { color: var(--verified); border-color: var(--verified); }
+  .source-url {
+    display: block;
+    font-family: var(--font-mono); font-size: .66rem; color: var(--ink-ghost);
+    word-break: break-all; line-height: 1.4; margin-top: .1rem;
+  }
+  .source.is-linked { background: var(--verified-w); }
+  .source.is-linked .source-num { color: var(--verified); }
+  .source.cite-flash { animation: citeFlash 1.4s ease-out; }
+  @keyframes citeFlash {
+    0%, 28% { background: var(--verified-w); box-shadow: -6px 0 0 var(--verified); }
+    100%    { background: transparent; box-shadow: -6px 0 0 transparent; }
+  }
+
+  /* sources appear at the foot of the prose on narrow screens */
+  .sources-foot { margin-top: 1.8rem; }
+  .sources-foot .footnote-rule { margin-bottom: .9rem; }
+
+  /* ===================== verdicts (fact-check ledger) ===================== */
+  .verdicts { margin-top: 1.4rem; }
+  .verdicts > summary {
+    font-family: var(--font-mono); font-size: .68rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--navy-300); cursor: pointer;
+    list-style: none; display: inline-flex; align-items: center; gap: .5rem;
+    padding: .35rem 0;
+  }
+  .verdicts > summary::-webkit-details-marker { display: none; }
+  .verdicts > summary::before { content: "▸"; transition: transform .15s; color: var(--ink-ghost); }
+  .verdicts[open] > summary::before { transform: rotate(90deg); }
+  .verdict { display: grid; grid-template-columns: auto 1fr; gap: .85rem; padding: .85rem 0; border-bottom: 1px solid var(--rule); }
+  .verdict:last-child { border-bottom: 0; }
+  .vtag {
+    font-family: var(--font-mono); font-size: .6rem; font-weight: 600; letter-spacing: .06em;
+    text-transform: uppercase; padding: .25rem .4rem; border-radius: 2px;
+    border: 1px solid; white-space: nowrap; height: fit-content; line-height: 1.1;
+    display: inline-flex; align-items: center; gap: .35rem;
+  }
+  .vtag-ok    { color: var(--verified); border-color: rgba(21,122,96,.4);  background: var(--verified-w); }
+  .vtag-no    { color: var(--refuted);  border-color: rgba(178,58,72,.4);  background: var(--refuted-w); }
+  .vtag-maybe { color: var(--pending);  border-color: rgba(154,107,18,.4); background: var(--pending-w); }
+  .verdict .claim { font-size: .98rem; color: var(--ink); margin: 0; line-height: 1.45; }
+  .verdict .reason { font-family: var(--font-mono); font-size: .72rem; color: var(--ink-faint); margin: .25rem 0 0; line-height: 1.45; }
+
+  /* ===================== status banners ===================== */
+  .banner { display: flex; align-items: center; gap: .6rem; font-family: var(--font-mono);
+    font-size: .72rem; letter-spacing: .04em; text-transform: uppercase; }
+  .dot { height: .55rem; width: .55rem; border-radius: 50%; flex: none; }
+  .dot-go { background: var(--verified); } .dot-wait { background: var(--pending); }
+  .dot-no { background: var(--refuted); } .dot-idle { background: var(--ink-ghost); }
+
+  /* ===================== motion ===================== */
+  @keyframes rise   { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  @keyframes settle { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: none; } }
+  @keyframes blink  { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+  @keyframes spin   { to { transform: rotate(360deg); } }
+  /* Entrance only — no animation-delay, so the run starts immediately and always
+     settles at the visible end state (a delayed `both`/`backwards` fill can strand
+     content at opacity:0 under some engines). */
+  .rise { animation: rise .5s cubic-bezier(.2,.7,.2,1) both; }
+  .spinner { height: 1rem; width: 1rem; border: 2px solid var(--rule-2); border-top-color: var(--navy); border-radius: 50%; animation: spin .8s linear infinite; flex: none; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+  }
+
+  /* ===================== landing ===================== */
+  .topbar { max-width: 72rem; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 1.3rem 1.5rem; }
+  .hero { max-width: 72rem; margin: 0 auto; padding: 1.5rem 1.5rem 0; }
+  .hero-grid { display: grid; grid-template-columns: 1fr; gap: 2.6rem; align-items: start; }
+  @media (min-width: 940px) { .hero-grid { grid-template-columns: 1.05fr .95fr; gap: 3.4rem; padding-top: 1.5rem; } }
+  .hero h1 { font-size: clamp(2.6rem, 6vw, 4.1rem); margin: 1.1rem 0 0; }
+  .hero h1 .alt { font-style: italic; color: var(--verified); font-weight: 500; }
+
+  /* the specimen — a live demo of the apparatus */
+  .specimen { padding: 1.6rem 1.5rem; }
+  .specimen .doc-grid { grid-template-columns: 1fr; gap: 1.4rem; margin-top: 1.1rem; }
+  @media (min-width: 600px) { .specimen .doc-grid { grid-template-columns: minmax(0,1fr) 12.5rem; gap: 1.8rem; } }
+  .specimen-tag {
+    position: absolute; top: -.7rem; left: 1.4rem;
+    font-family: var(--font-mono); font-size: .58rem; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--navy-300); background: var(--card); padding: 0 .5rem;
+  }
+
+  .auth-card { max-width: 26rem; }
+  .auth-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: .25rem; padding: .25rem; background: var(--paper-2); border-radius: 2px; margin-bottom: 1rem; }
+  .auth-tab {
+    font-family: var(--font-mono); font-size: .66rem; letter-spacing: .1em; text-transform: uppercase;
+    padding: .55rem; border: 0; border-radius: 2px; cursor: pointer; background: transparent; color: var(--ink-faint);
+    transition: background .15s, color .15s;
+  }
+  .auth-tab.active { background: var(--card); color: var(--ink); box-shadow: 0 1px 2px rgba(20,33,54,.12); }
+  .auth-or { display: flex; align-items: center; gap: .8rem; margin: 1rem 0; font-family: var(--font-mono); font-size: .62rem; letter-spacing: .15em; text-transform: uppercase; color: var(--ink-ghost); }
+  .auth-or::before, .auth-or::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+  .auth-err { font-family: var(--font-mono); font-size: .72rem; color: var(--refuted); }
+
+  .features { max-width: 72rem; margin: 0 auto; padding: 3.2rem 1.5rem 1rem; display: grid; gap: 0; grid-template-columns: 1fr; }
+  @media (min-width: 760px) { .features { grid-template-columns: repeat(3, 1fr); } }
+  .feature { padding: 1.4rem 1.6rem 1.4rem 0; border-top: 2px solid var(--rule-ink); }
+  .feature .fnum { font-family: var(--font-mono); font-size: .66rem; letter-spacing: .1em; color: var(--navy-300); }
+  .feature h3 { font-family: var(--font-display); font-weight: 600; font-size: 1.16rem; color: var(--ink); margin: .5rem 0 .4rem; letter-spacing: -.01em; }
+  .feature p { font-size: .96rem; color: var(--ink-soft); margin: 0; line-height: 1.5; }
+
+  .site-foot { max-width: 72rem; margin: 0 auto; padding: 2.5rem 1.5rem; font-family: var(--font-mono); font-size: .66rem; letter-spacing: .06em; color: var(--ink-ghost); display: flex; justify-content: space-between; flex-wrap: wrap; gap: .6rem; }
+
+  /* ===================== app shell ===================== */
+  #view-app { display: flex; height: 100vh; overflow: hidden; }
+  .nav-rail {
+    width: 280px; flex: none; height: 100%; display: flex; flex-direction: column;
+    background: var(--paper-2);
+    border-right: 1px solid var(--rule-2);
+    position: fixed; z-index: 30; left: 0; top: 0; transform: translateX(-100%);
+    transition: transform .22s cubic-bezier(.2,.7,.2,1);
+  }
+  .nav-rail.open { transform: none; }
+  @media (min-width: 880px) { .nav-rail { position: static; transform: none; } }
+  .rail-backdrop { position: fixed; inset: 0; z-index: 20; background: rgba(20,33,54,.35); }
+  @media (min-width: 880px) { .rail-backdrop { display: none !important; } }
+
+  .rail-head { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.25rem .9rem; }
+  .rail-files { flex: 1; min-height: 0; overflow-y: auto; padding: 0 .6rem; }
+  .rail-files-label {
+    font-family: var(--font-mono); font-size: .6rem; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--ink-ghost); padding: .8rem .65rem .5rem; display: flex; align-items: center; justify-content: space-between;
+  }
+  .file-item {
+    display: grid; grid-template-columns: auto 1fr auto; gap: .6rem; align-items: center;
+    padding: .55rem .65rem; border-radius: 2px; cursor: pointer; text-align: left; width: 100%;
+    border-left: 2px solid transparent; transition: background .15s;
+  }
+  .file-item:hover { background: rgba(28,46,74,.05); }
+  .file-item.active { background: var(--card); border-left-color: var(--navy); }
+  .file-q { min-width: 0; }
+  .file-q .q { font-family: var(--font-body); font-size: .92rem; color: var(--ink); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-q .t { font-family: var(--font-mono); font-size: .6rem; color: var(--ink-ghost); }
+  .file-del { opacity: 0; border: 0; background: transparent; color: var(--ink-ghost); cursor: pointer; font-family: var(--font-mono); padding: .2rem .3rem; border-radius: 2px; }
+  .file-item:hover .file-del { opacity: 1; }
+  .file-del:hover { color: var(--refuted); background: var(--refuted-w); }
+  .rail-empty { padding: 2rem .8rem; text-align: center; font-family: var(--font-mono); font-size: .7rem; color: var(--ink-ghost); line-height: 1.6; }
+
+  .rail-user { border-top: 1px solid var(--rule-2); padding: .85rem; display: flex; align-items: center; gap: .7rem; }
+  .avatar { height: 2.1rem; width: 2.1rem; flex: none; border-radius: 2px; background: var(--navy); color: #fff; display: grid; place-items: center; font-family: var(--font-display); font-weight: 600; font-size: .9rem; overflow: hidden; }
+  .avatar img { height: 100%; width: 100%; object-fit: cover; }
+  .rail-user .who { min-width: 0; flex: 1; }
+  .rail-user .who .n { font-size: .9rem; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rail-user .who .e { font-family: var(--font-mono); font-size: .64rem; color: var(--ink-ghost); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .work { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .work-top { display: flex; align-items: center; gap: .8rem; padding: 1rem 1.5rem; border-bottom: 1px solid var(--rule); background: rgba(251,252,253,.6); }
+  .work-title { flex: 1; min-width: 0; font-family: var(--font-display); font-weight: 600; font-size: 1.12rem; letter-spacing: -.01em; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .readout { font-family: var(--font-mono); font-size: .64rem; letter-spacing: .06em; color: var(--ink-faint); display: inline-flex; align-items: center; gap: .45rem; border: 1px solid var(--rule); padding: .35rem .6rem; border-radius: 2px; }
+  .icon-btn { border: 0; background: transparent; color: var(--ink-soft); cursor: pointer; padding: .4rem; border-radius: 2px; display: grid; place-items: center; }
+  .icon-btn:hover { background: rgba(28,46,74,.06); color: var(--ink); }
+  .work-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 1.6rem 1.5rem 4rem; }
+
+  .wrap { max-width: 56rem; margin: 0 auto; }
+  .stack > * + * { margin-top: 1.4rem; }
+
+  .chip {
+    font-family: var(--font-mono); font-size: .68rem; letter-spacing: .04em;
+    border: 1px solid var(--rule-2); border-radius: 2px; padding: .35rem .6rem;
+    color: var(--ink-soft); background: var(--card); cursor: pointer; transition: border-color .15s, color .15s;
+  }
+  .chip:hover { border-color: var(--navy-300); color: var(--ink); }
+
+  /* splash */
+  #splash { position: fixed; inset: 0; display: grid; place-items: center; background: var(--paper); z-index: 50; }
+
+  /* toast */
+  #toast { position: fixed; left: 50%; bottom: 1.4rem; transform: translateX(-50%); z-index: 60; display: flex; flex-direction: column; align-items: center; gap: .5rem; pointer-events: none; }
+  .toast {
+    pointer-events: auto; font-family: var(--font-mono); font-size: .74rem;
+    background: var(--navy); color: #EAF0F7; padding: .7rem 1rem; border-radius: 2px;
+    box-shadow: var(--shadow-pop); display: flex; align-items: center; gap: .6rem;
+    border-left: 3px solid var(--navy-300);
+  }
+  .toast.error { border-left-color: var(--refuted); }
+  .toast.success { border-left-color: var(--verified); }
   </style>
 </head>
-<body class="h-full bg-slate-50 text-slate-800">
-  <div class="max-w-3xl mx-auto px-4 py-8">
 
-    <!-- Header -->
-    <header class="mb-8">
-      <div class="flex items-center justify-between gap-4">
-        <div>
-          <h1 class="text-3xl font-bold tracking-tight text-slate-900">
-            Cite<span class="text-indigo-600">Wise</span>
-          </h1>
-          <p class="text-slate-500 mt-1">Multi-agent research assistant with adversarial fact-checking.</p>
-        </div>
-        <span id="modelBadge" class="hidden sm:inline-flex items-center gap-2 rounded-full bg-white border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm">
-          <span class="h-2 w-2 rounded-full bg-emerald-500"></span><span id="modelText">…</span>
-        </span>
-      </div>
-    </header>
+<body>
 
-    <!-- Question form -->
-    <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-      <label for="question" class="block text-sm font-medium text-slate-700 mb-2">Research question</label>
-      <textarea id="question" rows="2"
-        class="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none"
-        placeholder="e.g. How has the cost of solar power changed, and why does it matter?"></textarea>
-      <div class="mt-3 flex items-center justify-between">
-        <p class="text-xs text-slate-400">Planner → Researcher → Fact-Checker → Synthesizer, with your approval before export.</p>
-        <button id="researchBtn"
-          class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition">
-          <span id="btnText">Research</span>
-        </button>
-      </div>
-    </section>
-
-    <!-- Progress -->
-    <section id="progress" class="hidden mt-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-5 fade-in">
-      <div id="steps" class="flex flex-wrap gap-2"></div>
-    </section>
-
-    <!-- Results -->
-    <section id="results" class="mt-6 space-y-6"></section>
-
-    <footer class="mt-12 text-center text-xs text-slate-400">
-      CiteWise · LangGraph multi-agent capstone
-    </footer>
+  <!-- Splash while we resolve auth -->
+  <div id="splash">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:.8rem">
+      <div class="spinner" style="height:1.4rem;width:1.4rem"></div>
+      <p class="mono" style="font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)">Opening CiteWise</p>
+    </div>
   </div>
 
-  <script>
-    const PIPELINE = [
-      { key: "guardrail",    label: "Validate" },
-      { key: "planner",      label: "Plan" },
-      { key: "researcher",   label: "Research" },
-      { key: "fact_checker", label: "Fact-check" },
-      { key: "synthesizer",  label: "Write" },
-    ];
-    const STATUS_STYLE = {
-      supported:           { c: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500", t: "supported" },
-      unsupported:         { c: "bg-rose-50 text-rose-700 border-rose-200",          dot: "bg-rose-500",    t: "unsupported" },
-      needs_more_evidence: { c: "bg-amber-50 text-amber-700 border-amber-200",       dot: "bg-amber-500",   t: "needs more" },
-    };
+  <!-- ============================== LANDING ============================== -->
+  <main id="view-landing" hidden>
+    <nav class="topbar">
+      <a href="#" class="wordmark"><span class="mark">Cite<span class="w">Wise</span></span><span class="ref">[1]</span></a>
+      <button data-login class="btn btn-ghost">Log in</button>
+    </nav>
 
-    const $ = (id) => document.getElementById(id);
-    let threadId = null, es = null;
+    <section class="hero">
+      <div class="hero-grid">
+        <div>
+          <p class="eyebrow rise">A multi-agent research instrument</p>
+          <h1 class="display rise">
+            Every claim,<br /><span class="alt">traced to its source.</span>
+          </h1>
+          <p class="lead rise" style="margin-top:1.4rem; max-width:34rem">
+            Four agents plan, gather, adversarially fact-check, and write — so nothing reaches
+            the page without a real, cited source behind it. You sign off before anything is exported.
+          </p>
 
-    // Provider/model badge
-    fetch("/api/config").then(r => r.json()).then(d => {
-      $("modelText").textContent = `${d.provider} · ${d.model}`;
-      $("modelBadge").classList.remove("hidden");
-    }).catch(() => {});
+          <!-- Auth controls (rendered by app.js based on what's configured) -->
+          <div id="authControls" class="rise" style="margin-top:1.8rem"></div>
 
-    function renderSteps(activeKey, allDone = false) {
-      $("steps").innerHTML = PIPELINE.map((p, i) => {
-        const activeIdx = PIPELINE.findIndex(x => x.key === activeKey);
-        let cls = "bg-slate-100 text-slate-400 border-slate-200", icon = "○";
-        if (allDone || (activeIdx > -1 && i < activeIdx)) { cls = "bg-emerald-50 text-emerald-700 border-emerald-200"; icon = "✓"; }
-        else if (activeIdx > -1 && i === activeIdx) { cls = "bg-indigo-50 text-indigo-700 border-indigo-300 step-active"; icon = "●"; }
-        return `<span class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium ${cls}">
-                  <span>${icon}</span>${p.label}</span>`;
-      }).join("");
-    }
-
-    function setBusy(busy) {
-      $("researchBtn").disabled = busy;
-      $("btnText").textContent = busy ? "Researching…" : "Research";
-    }
-
-    function card(inner, extra = "") {
-      const el = document.createElement("div");
-      el.className = `bg-white rounded-2xl shadow-sm border border-slate-200 p-5 fade-in ${extra}`;
-      el.innerHTML = inner;
-      $("results").appendChild(el);
-      return el;
-    }
-
-    function escapeHtml(s) {
-      return (s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
-    }
-
-    function renderReport(report) {
-      if (!report) return "";
-      const sections = (report.sections || []).map(s =>
-        `<div class="mt-4"><h4 class="font-semibold text-slate-800">${escapeHtml(s.heading)}</h4>
-         <p class="mt-1 text-slate-600 whitespace-pre-line">${escapeHtml(s.content)}</p></div>`).join("");
-      const cites = (report.citations || []).map(u =>
-        `<li><a href="${escapeHtml(u)}" target="_blank" rel="noopener"
-           class="text-indigo-600 hover:underline break-all">${escapeHtml(u)}</a></li>`).join("");
-      return `
-        <h3 class="text-lg font-bold text-slate-900">Report</h3>
-        <p class="mt-2 text-slate-700 whitespace-pre-line">${escapeHtml(report.summary)}</p>
-        ${sections}
-        ${cites ? `<div class="mt-5 pt-4 border-t border-slate-100">
-          <h4 class="font-semibold text-slate-800 mb-2">Citations</h4>
-          <ul class="space-y-1 text-sm list-disc list-inside">${cites}</ul></div>` : ""}`;
-    }
-
-    function renderVerdicts(verdicts) {
-      if (!verdicts || !verdicts.length) return "";
-      const rows = verdicts.map(v => {
-        const st = STATUS_STYLE[v.status] || STATUS_STYLE.needs_more_evidence;
-        return `<div class="py-3 border-b border-slate-100 last:border-0">
-          <div class="flex items-start gap-3">
-            <span class="mt-0.5 inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-medium ${st.c}">
-              <span class="h-1.5 w-1.5 rounded-full ${st.dot}"></span>${st.t} · ${v.confidence}</span>
-            <div class="min-w-0">
-              <p class="text-sm text-slate-800">${escapeHtml(v.claim)}</p>
-              <p class="text-xs text-slate-400 mt-0.5">${escapeHtml(v.reasoning)}</p>
-            </div></div></div>`;
-      }).join("");
-      return `<details class="mt-4 group"><summary class="cursor-pointer text-sm font-medium text-slate-600 hover:text-slate-900">
-                Fact-check details (${verdicts.length})</summary>
-              <div class="mt-2">${rows}</div></details>`;
-    }
-
-    function renderDraft(d) {
-      renderSteps(null, true);
-      const stats = `<div class="flex gap-4 text-xs text-slate-500 mt-1">
-          <span><b class="text-slate-700">${d.n_verified}</b> verified</span>
-          <span><b class="text-slate-700">${d.n_claims}</b> claims gathered</span></div>`;
-      const el = card(`
-        <div class="flex items-center justify-between">
-          <span class="inline-flex items-center gap-2 rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1 text-xs font-medium">
-            <span class="h-2 w-2 rounded-full bg-amber-500"></span>Draft — awaiting your approval</span>
+          <div class="rise" style="margin-top:2rem">
+            <div class="stages" aria-label="The pipeline">
+              <span class="stage done"><span class="num">1</span>Plan<span class="arrow">→</span></span>
+              <span class="stage done"><span class="num">2</span>Research<span class="arrow">→</span></span>
+              <span class="stage done"><span class="num">3</span>Fact-check<span class="arrow">→</span></span>
+              <span class="stage done"><span class="num">4</span>Write</span>
+            </div>
+          </div>
         </div>
-        ${stats}
-        <div class="mt-4">${renderReport(d.report)}</div>
-        ${renderVerdicts(d.verdicts)}
-        <div class="mt-5 pt-4 border-t border-slate-100 flex gap-3">
-          <button data-act="approve" class="flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 transition">Approve &amp; export</button>
-          <button data-act="reject" class="flex-1 rounded-xl bg-white border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">Reject &amp; revise</button>
-        </div>`);
-      el.querySelector('[data-act="approve"]').onclick = () => decide(el, true);
-      el.querySelector('[data-act="reject"]').onclick = () => decide(el, false);
-    }
 
-    async function decide(draftEl, approved) {
-      draftEl.querySelectorAll("button").forEach(b => { b.disabled = true; b.classList.add("opacity-50"); });
-      try {
-        const res = await fetch("/api/approve", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ thread_id: threadId, approved }),
-        }).then(r => r.json());
+        <!-- the specimen: a live demo of the citation apparatus = the thesis -->
+        <div class="sheet specimen rise" style="position:relative">
+          <span class="specimen-tag">Specimen · output</span>
+          <div class="doc" data-report>
+            <div class="doc-head">
+              <span class="kicker">Report</span>
+            </div>
+            <div class="doc-grid">
+              <div class="doc-body">
+                <p style="font-size:1rem">
+                  The cost of utility-scale solar fell roughly <strong>89%</strong> between 2010 and 2023,
+                  driven by manufacturing scale and improved cell efficiency.<a class="cite-ref" data-cite-ref="1" href="#spec-1">1</a>
+                  In many markets it is now the cheapest source of new electricity.<a class="cite-ref" data-cite-ref="2" href="#spec-2">2</a>
+                  Claims of grid parity without storage, however, remain contested.<a class="cite-ref" data-cite-ref="3" href="#spec-3">3</a>
+                </p>
+              </div>
+              <aside class="doc-margin">
+                <div class="doc-margin-inner">
+                  <div class="margin-label">Sources</div>
+                  <ol class="sources">
+                    <li id="spec-1" data-cite-anchor="1" class="source">
+                      <span class="source-num">1<span class="tick tick-ok" title="Supported">✓</span></span>
+                      <a class="source-link" href="#"><span class="source-host">irena.org</span></a>
+                    </li>
+                    <li id="spec-2" data-cite-anchor="2" class="source">
+                      <span class="source-num">2<span class="tick tick-ok" title="Supported">✓</span></span>
+                      <a class="source-link" href="#"><span class="source-host">iea.org</span></a>
+                    </li>
+                    <li id="spec-3" data-cite-anchor="3" class="source">
+                      <span class="source-num">3<span class="tick tick-maybe" title="Needs more evidence">~</span></span>
+                      <a class="source-link" href="#"><span class="source-host">nrel.gov</span></a>
+                    </li>
+                  </ol>
+                  <hr class="footnote-rule" style="margin-top:.9rem" />
+                  <p class="mono" style="font-size:.62rem;color:var(--ink-ghost);margin:.6rem 0 0;line-height:1.5">
+                    ✓ supported · ~ needs more · ✕ refuted &amp; dropped
+                  </p>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-        if (res.status === "exported") {
-          card(`<div class="flex items-center gap-2 text-emerald-700 font-semibold">
-                  <span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>Approved — exported to <code class="bg-slate-100 px-1.5 py-0.5 rounded">./output</code></div>
-                <div class="mt-4">${renderReport(res.report)}</div>`);
-        } else if (res.status === "draft") {
-          card(`<p class="text-sm text-slate-500">Revised draft generated — review again:</p>`);
-          renderDraft(res);
-        } else if (res.status === "error") {
-          renderError(res.message);
-        } else {
-          card(`<p class="text-slate-600">Report was not approved; nothing was exported.</p>`);
-        }
-      } catch (e) {
-        renderError(String(e));
-      }
-    }
+    <section class="features">
+      <div class="feature">
+        <p class="fnum">No. 1</p>
+        <h3>Adversarial fact-checking</h3>
+        <p>A skeptic agent tries to refute every claim and loops back for more evidence when a source falls short.</p>
+      </div>
+      <div class="feature">
+        <p class="fnum">No. 2</p>
+        <h3>Cited sources only</h3>
+        <p>Claims without a resolvable source are dropped. The final report links every citation it relies on.</p>
+      </div>
+      <div class="feature">
+        <p class="fnum">No. 3</p>
+        <h3>You sign off</h3>
+        <p>The pipeline pauses for your approval before exporting. Reject to send it back for another revision pass.</p>
+      </div>
+    </section>
 
-    function renderRefused(reason) {
-      renderSteps(null, false);
-      card(`<div class="flex items-start gap-3">
-        <span class="mt-0.5 h-2.5 w-2.5 rounded-full bg-rose-500 shrink-0"></span>
-        <div><h3 class="font-semibold text-rose-700">Request refused by guardrails</h3>
-        <p class="mt-1 text-sm text-slate-600">${escapeHtml(reason)}</p></div></div>`, "border-rose-200");
-    }
+    <footer class="site-foot">
+      <span>CiteWise — LangGraph multi-agent capstone</span>
+      <span>Plan · Research · Fact-check · Write</span>
+    </footer>
+  </main>
 
-    function renderError(msg) {
-      card(`<h3 class="font-semibold text-rose-700">Something went wrong</h3>
-            <p class="mt-1 text-sm text-slate-600 break-words">${escapeHtml(msg)}</p>`, "border-rose-200");
-    }
+  <!-- ============================== APP ============================== -->
+  <div id="view-app" hidden>
 
-    function startResearch() {
-      const q = $("question").value.trim();
-      if (!q) { $("question").focus(); return; }
-      $("results").innerHTML = "";
-      $("progress").classList.remove("hidden");
-      renderSteps("guardrail");
-      setBusy(true);
-      threadId = null;
-      if (es) es.close();
+    <div id="sidebarBackdrop" hidden class="rail-backdrop"></div>
 
-      es = new EventSource(`/api/research?question=${encodeURIComponent(q)}`);
-      es.onmessage = (ev) => {
-        const d = JSON.parse(ev.data);
-        if (d.type === "thread") threadId = d.thread_id;
-        else if (d.type === "node") renderSteps(d.node);
-        else if (d.type === "draft") { renderDraft(d); es.close(); setBusy(false); }
-        else if (d.type === "refused") { renderRefused(d.reason); es.close(); setBusy(false); }
-        else if (d.type === "error") { renderError(d.message); es.close(); setBusy(false); }
-        else if (d.type === "end") { es.close(); setBusy(false); }
+    <!-- Case-file rail -->
+    <aside id="sidebar" class="nav-rail">
+      <div class="rail-head">
+        <a href="#" class="wordmark"><span class="mark">Cite<span class="w">Wise</span></span><span class="ref">[1]</span></a>
+        <button id="sidebarClose" class="icon-btn" style="display:none" aria-label="Close">✕</button>
+      </div>
+
+      <div style="padding:0 .9rem">
+        <button id="newResearchBtn" class="btn btn-ink" style="width:100%; justify-content:center">
+          <span style="font-size:1rem;line-height:0">+</span> New inquiry
+        </button>
+      </div>
+
+      <div class="rail-files-label" style="margin-top:.4rem"><span>Case file</span></div>
+      <div id="historyList" class="rail-files"></div>
+
+      <div class="rail-user">
+        <div id="userAvatar" class="avatar"></div>
+        <div class="who">
+          <p id="userName" class="n" style="margin:0"></p>
+          <p id="userEmail" class="e" style="margin:0"></p>
+        </div>
+        <button id="logoutBtn" title="Log out" class="icon-btn" aria-label="Log out">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Workspace -->
+    <div class="work">
+      <header class="work-top">
+        <button id="sidebarOpen" class="icon-btn" aria-label="Menu" style="display:none">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <h2 id="mainTitle" class="work-title">New inquiry</h2>
+        <span id="modelBadge" class="readout" hidden>
+          <span class="dot dot-go"></span><span id="modelText" class="mono">…</span>
+        </span>
+      </header>
+
+      <main id="main" class="work-scroll"></main>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="/static/app.js"></script>
+  <script>
+    // Toggle the mobile-only rail buttons (no Tailwind responsive classes anymore)
+    (function () {
+      const mq = window.matchMedia("(max-width: 879px)");
+      const sync = () => {
+        const mobile = mq.matches;
+        const o = document.getElementById("sidebarOpen");
+        const c = document.getElementById("sidebarClose");
+        if (o) o.style.display = mobile ? "grid" : "none";
+        if (c) c.style.display = mobile ? "grid" : "none";
       };
-      es.onerror = () => { es.close(); setBusy(false); };
-    }
-
-    $("researchBtn").onclick = startResearch;
-    $("question").addEventListener("keydown", (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") startResearch();
-    });
+      mq.addEventListener ? mq.addEventListener("change", sync) : mq.addListener(sync);
+      sync();
+      window.__railSync = sync;
+    })();
   </script>
 </body>
 </html>

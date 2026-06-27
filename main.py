@@ -29,8 +29,8 @@ def _print_report(report: FinalReport) -> None:
         print(f"## {section.heading}\n{section.content}\n")
     if report.citations:
         print("Citations:")
-        for url in report.citations:
-            print(f"  - {url}")
+        for i, url in enumerate(report.citations, 1):
+            print(f"  [{i}] {url}")
     print("=" * 70)
 
 
@@ -41,8 +41,8 @@ def _interactive_approval(payload: dict) -> bool:
     print(f"Sections: {', '.join(payload.get('sections', [])) or '(none)'}")
     citations = payload.get("citations", [])
     print("Citations:")
-    for url in citations:
-        print(f"  - {url}")
+    for i, url in enumerate(citations, 1):
+        print(f"  [{i}] {url}")
     if not citations:
         print("  (none)")
 
