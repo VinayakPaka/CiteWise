@@ -88,13 +88,18 @@ def _build_chat(provider: str, max_tokens: int, temperature: float, max_retries:
     if provider == "ollama":
         from langchain_ollama import ChatOllama
 
-        return ChatOllama(model=model, temperature=temperature)
+        # Ollama's max-output-tokens knob is ``num_predict`` — pass the caller's
+        # cap through so Ollama-backed agents honour it (otherwise reports can be
+        # truncated at the model default).
+        return ChatOllama(model=model, temperature=temperature, num_predict=max_tokens)
 
     if provider == "anthropic":
         from langchain_anthropic import ChatAnthropic
 
-        # Opus 4.x rejects temperature/top_p, so we deliberately don't pass them.
-        return ChatAnthropic(model=model, max_tokens=max_tokens)
+        # Pass temperature like every other provider so the same get_llm(temperature=…)
+        # call behaves consistently across the abstraction (Claude accepts temperature
+        # for standard, non-thinking requests).
+        return ChatAnthropic(model=model, max_tokens=max_tokens, temperature=temperature)
 
     raise ValueError(
         f"Unknown provider {provider!r}. Use one of: "

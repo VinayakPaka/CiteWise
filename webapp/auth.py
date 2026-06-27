@@ -86,8 +86,8 @@ def _set_session_cookie(resp: Response, token: str) -> None:
         token,
         max_age=config.SESSION_DAYS * 86400,
         httponly=True,
-        samesite="lax",
-        secure=False,  # demo runs over http://127.0.0.1
+        samesite="lax",            # blocks the cross-site POST/DELETE CSRF vectors
+        secure=config.COOKIE_SECURE,  # True over HTTPS in prod (CITEWISE_COOKIE_SECURE)
         path="/",
     )
 

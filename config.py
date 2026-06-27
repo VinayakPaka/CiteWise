@@ -4,6 +4,8 @@ Loads environment variables from `.env` (if present) and exposes them as module
 constants. Import these instead of calling os.getenv throughout the codebase.
 """
 import os
+import secrets
+import sys
 
 try:
     from dotenv import load_dotenv
@@ -75,12 +77,24 @@ TAVILY_API_KEY: str | None = os.getenv("TAVILY_API_KEY")
 
 # --- Web app: accounts, sessions & history ----------------------------------
 # Login is email + password. A successful login mints a JWT (HS256) that is
-# stored in an httponly cookie; CITEWISE_JWT_SECRET signs it. The dev default
-# below keeps local demos working out of the box, but set a long random secret
-# in production — anyone who knows it can forge a login:
+# stored in an httponly cookie; CITEWISE_JWT_SECRET signs it. When it is not set
+# we generate a RANDOM per-process secret instead of shipping a fixed default —
+# a hardcoded key in the source would let anyone who reads it forge a login. The
+# trade-off is that logins don't survive a server restart; set a fixed secret in
+# .env to persist sessions in production:
 #   python -c "import secrets; print(secrets.token_urlsafe(48))"
-JWT_SECRET: str = os.getenv("CITEWISE_JWT_SECRET") or "citewise-dev-secret-change-me-in-production"
+JWT_SECRET: str = os.getenv("CITEWISE_JWT_SECRET") or secrets.token_urlsafe(48)
 JWT_ALG: str = "HS256"
+if not os.getenv("CITEWISE_JWT_SECRET"):
+    print(
+        "[citewise] CITEWISE_JWT_SECRET not set — using a random per-process secret; "
+        "logins won't survive a restart. Set it in .env to persist sessions.",
+        file=sys.stderr,
+    )
+
+# Send the session cookie only over HTTPS. Defaults to False so the local
+# http://127.0.0.1 demo works; set CITEWISE_COOKIE_SECURE=true behind HTTPS.
+COOKIE_SECURE: bool = os.getenv("CITEWISE_COOKIE_SECURE", "false").lower() in {"1", "true", "yes"}
 
 # Guest login (type a name, no password). Kept on by default so flaky demo Wi-Fi
 # or a forgotten password never leaves you with an unusable app on stage.
